@@ -11,16 +11,14 @@ module.exports = class extends Environment {
       this.plugins.set('HotModuleReplacement', new webpack.HotModuleReplacementPlugin())
       this.plugins.set('NamedModules', new webpack.NamedModulesPlugin())
     }
-  }
 
-  toWebpackConfig() {
-    const result = super.toWebpackConfig()
     if (devServer.hmr) {
-      result.output.filename = '[name]-[hash].js'
+      this.config.output.filename = '[name]-[hash].js'
     }
-    result.output.pathinfo = true
-    result.devtool = 'cheap-eval-source-map'
-    result.devServer = {
+
+    this.config.output.pathinfo = true
+    this.config.devtool = 'cheap-eval-source-map'
+    this.config.devServer = {
       clientLogLevel: 'none',
       compress: true,
       disableHostCheck: devServer.disable_host_check,
@@ -45,6 +43,9 @@ module.exports = class extends Environment {
         errorDetails: true
       }
     }
-    return result
+  }
+
+  toWebpackConfig() {
+    return this.config
   }
 }

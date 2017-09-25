@@ -23,12 +23,12 @@ module.exports = class extends Environment {
       algorithm: 'gzip',
       test: /\.(js|css|html|json|ico|svg|eot|otf|ttf)$/
     }))
+
+    this.config.devtool = 'nosources-source-map'
+    this.config.stats = 'normal'
   }
 
   toWebpackConfig() {
-    const result = super.toWebpackConfig()
-    result.devtool = 'nosources-source-map'
-    result.stats = 'normal'
-    return result
+    return this.config
   }
 }

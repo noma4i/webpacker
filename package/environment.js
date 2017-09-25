@@ -12,7 +12,7 @@ const ManifestPlugin = require('webpack-manifest-plugin')
 const config = require('./config')
 const assetHost = require('./asset_host')
 
-function getLoaderMap() {
+const getLoaderMap = () => {
   const result = new Map()
   const paths = sync(resolve(__dirname, 'loaders', '*.js'))
   paths.forEach((path) => {
@@ -22,7 +22,7 @@ function getLoaderMap() {
   return result
 }
 
-function getPluginMap() {
+const getPluginMap = () => {
   const result = new Map()
   result.set('Environment', new webpack.EnvironmentPlugin(JSON.parse(JSON.stringify(process.env))))
   result.set('ExtractText', new ExtractTextPlugin('[name]-[contenthash].css'))
@@ -30,7 +30,7 @@ function getPluginMap() {
   return result
 }
 
-function getExtensionsGlob() {
+const getExtensionsGlob = () => {
   const { extensions } = config
   if (!extensions.length) {
     throw new Error('You must configure at least one extension to compile in webpacker.yml')
@@ -38,36 +38,45 @@ function getExtensionsGlob() {
   return extensions.length === 1 ? `**/${extensions[0]}` : `**/*{${extensions.join(',')}}`
 }
 
-function getEntryObject() {
-  const result = {}
+const getEntryMap = () => {
+  const result = new Map()
   const glob = getExtensionsGlob()
   const rootPath = join(config.source_path, config.source_entry_path)
   const paths = sync(join(rootPath, glob))
   paths.forEach((path) => {
     const namespace = relative(join(rootPath), dirname(path))
     const name = join(namespace, basename(path, extname(path)))
-    result[name] = resolve(path)
+    result.set(name, resolve(path))
   })
   return result
 }
 
-function getModulePaths() {
-  let result = [resolve(config.source_path), 'node_modules']
+const getResolvedModuleMap = () => {
+  const result = new Map()
+  result.set('source', resolve(config.source_path))
+  result.set('node_modules', 'node_modules')
   if (config.resolved_paths) {
-    result = result.concat(config.resolved_paths)
+    config.resolved_paths.forEach(path =>
+      result.set(path, path)
+    )
   }
   return result
 }
+
+const getObjectFromMap = ((map) => {
+  const obj = {}
+  map.forEach((v, k) => (obj[k] = v))
+  return obj
+})
 
 module.exports = class Environment {
   constructor() {
     this.loaders = getLoaderMap()
     this.plugins = getPluginMap()
-  }
-
-  toWebpackConfig() {
-    return {
-      entry: getEntryObject(),
+    this.entries = getEntryMap()
+    this.resolvedModules = getResolvedModuleMap()
+    this.config = {
+      entry: getObjectFromMap(this.entries),
 
       output: {
         filename: '[name]-[chunkhash].js',
@@ -84,12 +93,16 @@ module.exports = class Environment {
 
       resolve: {
         extensions: config.extensions,
-        modules: getModulePaths()
+        modules: Array.from(this.resolvedModules.values())
       },
 
       resolveLoader: {
         modules: ['node_modules']
       }
     }
+  }
+
+  toWebpackConfig() {
+    return this.config
   }
 }
